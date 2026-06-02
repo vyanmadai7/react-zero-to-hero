@@ -6176,6 +6176,324 @@ function CategoryList() {
 
 ]; // END LESSONS_DATA
 
+/* ==============================================================
+   CHAPTER DEFINITIONS — Maps lesson chapter strings to display config
+============================================================== */
+const CHAPTERS = [
+  { name: "Foundations",      icon: "🧱" },
+  { name: "Interactivity",    icon: "🖱️" },
+  { name: "Hooks",            icon: "🪝" },
+  { name: "State Management", icon: "🗄️" },
+  { name: "Routing",          icon: "🗺️" },
+  { name: "Data & APIs",      icon: "🌐" },
+  { name: "Performance",      icon: "⚡" },
+  { name: "Career",           icon: "💼" }
+];
 
+/* STATE */
+const state = {
+  theme: localStorage.getItem('theme') || 'dark',
+  completed: JSON.parse(localStorage.getItem('completed')) || [],
+  sidebarOpen: false
+};
+
+const dom = {
+  app: document.getElementById('app'),
+  home: document.getElementById('view-home'),
+  lesson: document.getElementById('view-lesson'),
+  sidebarNav: document.getElementById('sidebar-nav'),
+  topicGrid: document.getElementById('topic-cards-grid'),
+  progressText: document.getElementById('progress-text'),
+  sidebarPct: document.getElementById('sidebar-progress-pct'),
+  sidebarFill: document.getElementById('sidebar-progress-fill'),
+  searchResults: document.getElementById('search-results')
+};
+
+function init() {
+  setTheme(state.theme);
+  renderSidebar();
+  renderTopics();
+  updateProgress();
+  window.addEventListener('hashchange', router);
+  router(); // Run on initial load
+}
+
+function setTheme(theme) {
+  state.theme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+}
+
+window.toggleTheme = function() {
+  setTheme(state.theme === 'dark' ? 'light' : 'dark');
+}
+
+window.toggleSidebar = function() {
+  const sidebar = document.getElementById('sidebar');
+  state.sidebarOpen = !state.sidebarOpen;
+  
+  if(window.innerWidth <= 768) {
+     sidebar.style.display = state.sidebarOpen ? 'block' : 'none';
+     document.getElementById('sidebar-overlay').style.display = state.sidebarOpen ? 'block' : 'none';
+  } else {
+     sidebar.style.display = state.sidebarOpen ? 'none' : 'block';
+  }
+}
+
+window.showHome = function() {
+  window.location.hash = '/';
+}
+
+window.scrollToTopics = function() {
+  document.getElementById('topics-section')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+window.startLearning = function() {
+  if (LESSONS_DATA.length > 0) {
+    window.location.hash = '/lesson/' + LESSONS_DATA[0].slug;
+  }
+}
+
+function router() {
+  const hash = window.location.hash.slice(1) || '/';
+  if (hash.startsWith('/lesson/')) {
+    const slug = hash.split('/lesson/')[1];
+    const lesson = LESSONS_DATA.find(l => l.slug === slug);
+    if (lesson) {
+      dom.home.classList.remove('active');
+      dom.lesson.classList.add('active');
+      renderLesson(lesson);
+      updateSidebarActive(lesson.slug);
+      document.getElementById('main').scrollTo(0,0);
+    } else {
+      showHome();
+    }
+  } else {
+    dom.lesson.classList.remove('active');
+    dom.home.classList.add('active');
+    updateSidebarActive(null);
+  }
+}
+
+function renderSidebar() {
+  let html = '';
+  CHAPTERS.forEach(chap => {
+    html += `<div class="sidebar-section-title">${chap.icon} ${chap.name}</div>`;
+    const lessons = LESSONS_DATA.filter(l => l.chapter === chap.name);
+    lessons.forEach((l, idx) => {
+      const isDone = state.completed.includes(l.slug);
+      html += `
+        <div class="sidebar-item ${isDone ? 'completed' : ''}" onclick="window.location.hash='/lesson/${l.slug}'" data-slug="${l.slug}">
+          <span class="item-num">${idx + 1}.</span>
+          <span class="item-title" style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${l.title}</span>
+          <div class="item-check">✓</div>
+        </div>
+      `;
+    });
+  });
+  dom.sidebarNav.innerHTML = html;
+}
+
+function renderTopics() {
+  let html = '';
+  LESSONS_DATA.forEach(l => {
+    html += `
+      <div class="topic-card" onclick="window.location.hash='/lesson/${l.slug}'">
+        <div class="topic-card-icon">${l.icon}</div>
+        <div class="topic-card-title">${l.title}</div>
+        <div class="topic-card-desc">${l.desc || ''}</div>
+        <div class="topic-card-level level-${l.level}">${l.level}</div>
+      </div>
+    `;
+  });
+  dom.topicGrid.innerHTML = html;
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function renderLesson(lesson) {
+  const isDone = state.completed.includes(lesson.slug);
+  let html = `
+    <div class="lesson-header">
+      <div class="lesson-breadcrumb">
+        <span>Course</span> &rsaquo; <span>${lesson.chapter}</span> &rsaquo; <span>${lesson.title}</span>
+      </div>
+      <h1 class="lesson-title">${lesson.title}</h1>
+      <div class="lesson-meta">
+        <span class="lesson-tag">${lesson.level}</span>
+        <span class="lesson-duration">⏳ ${lesson.duration}</span>
+        <button class="${isDone ? 'btn-secondary' : 'btn-primary'}" onclick="toggleComplete('${lesson.slug}')">
+          ${isDone ? '🔄 Mark Incomplete' : '✅ Mark Complete'}
+        </button>
+      </div>
+    </div>
+    <div class="lesson-body">
+  `;
+
+  (lesson.sections || []).forEach(sec => {
+    html += `<div class="lesson-section">`;
+    if (sec.heading) html += `<h2 class="section-h2">${sec.heading}</h2>`;
+    
+    // Paragraph content
+    if (sec.content) {
+       html += `<p style="margin-bottom: var(--sp-4);">${sec.content}</p>`;
+    }
+    
+    // Interactive Code blocks
+    if (sec.code) {
+      html += `
+        <div style="background: var(--bg-code); padding: var(--sp-4); border-radius: var(--r-md); margin-bottom: var(--sp-4); overflow-x: auto; border: 1px solid var(--border-strong);">
+          <pre><code style="color: var(--text-code); font-family: var(--font-code); font-size: var(--text-sm);">${escapeHTML(sec.code)}</code></pre>
+        </div>
+      `;
+    }
+    
+    // List elements / definitions
+    if (sec.items) {
+      html += `<ul style="padding-left: var(--sp-6); margin-bottom: var(--sp-4);">`;
+      sec.items.forEach(item => {
+        html += `<li style="margin-bottom: var(--sp-2);"><strong>${item.term}</strong>: ${item.desc}</li>`;
+      });
+      html += `</ul>`;
+    }
+    
+    // Notes
+    if (sec.notes) {
+      html += `
+        <div style="background: var(--accent-dim); padding: var(--sp-4); border-radius: var(--r-md); margin-bottom: var(--sp-4); border-left: 4px solid var(--accent);">
+          <strong style="display: block; margin-bottom: var(--sp-2); color: var(--accent);">💡 Notes</strong>
+          <ul style="padding-left: var(--sp-4);">
+            ${sec.notes.map(n => `<li style="margin-bottom: 4px;">${n}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+    
+    // Interview Qs
+    if (sec.questions) {
+      sec.questions.forEach(q => {
+        html += `
+          <div style="margin-bottom: var(--sp-4); padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg-elevated);">
+            <p style="font-weight: bold; margin-bottom: var(--sp-2);">Q: ${q.q}</p>
+            <p style="color: var(--text-secondary); margin: 0;">A: ${q.a}</p>
+          </div>
+        `;
+      });
+    }
+    
+    html += `</div>`;
+  });
+  
+  if (lesson.quiz && lesson.quiz.length > 0) {
+    html += `<div class="lesson-section"><h2 class="section-h2">🧠 Knowledge Check</h2>`;
+    lesson.quiz.forEach((q, idx) => {
+      html += `
+        <div style="margin-bottom: var(--sp-6); padding: var(--sp-5); border-radius: var(--r-md); background: var(--bg-elevated); border: 1px solid var(--border);">
+          <p style="font-weight: 600; margin-bottom: var(--sp-4); font-size: var(--text-md);">${q.q}</p>
+          <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
+          ${q.options.map((opt, oIdx) => `
+            <button class="btn-secondary" style="justify-content: flex-start; padding: var(--sp-3) var(--sp-4); width: 100%; border: 1px solid var(--border-strong);" onclick="checkAnswer(${lesson.id}, ${idx}, ${oIdx})">
+              ${opt}
+            </button>
+          `).join('')}
+          </div>
+          <p id="quiz-res-${lesson.id}-${idx}" style="margin-top: var(--sp-4); font-weight: 600; min-height: 20px;"></p>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  
+  // Navigation footer
+  const idx = LESSONS_DATA.findIndex(l => l.slug === lesson.slug);
+  const prev = LESSONS_DATA[idx - 1];
+  const next = LESSONS_DATA[idx + 1];
+  html += `
+    <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: var(--sp-6); margin-top: var(--sp-8);">
+      ${prev ? `<button class="btn-secondary" onclick="window.location.hash='/lesson/${prev.slug}'">← ${prev.title}</button>` : `<div></div>`}
+      ${next ? `<button class="btn-primary" onclick="window.location.hash='/lesson/${next.slug}'">${next.title} →</button>` : `<div></div>`}
+    </div>
+  `;
+  
+  html += `</div>`;
+  dom.lesson.innerHTML = html;
+}
+
+window.checkAnswer = function(lessonId, quizIdx, optIdx) {
+  const lesson = LESSONS_DATA.find(l => l.id === lessonId);
+  const q = lesson.quiz[quizIdx];
+  const resElem = document.getElementById(`quiz-res-${lesson.id}-${quizIdx}`);
+  if (q.correct === optIdx) {
+    resElem.innerHTML = "✅ <strong>Correct!</strong> " + (q.explanation || '');
+    resElem.style.color = "var(--quiz-correct-border)";
+  } else {
+    resElem.innerHTML = "❌ <strong>Incorrect.</strong> Try again.";
+    resElem.style.color = "var(--quiz-wrong-border)";
+  }
+};
+
+window.toggleComplete = function(slug) {
+  if (state.completed.includes(slug)) {
+    state.completed = state.completed.filter(s => s !== slug);
+  } else {
+    state.completed.push(slug);
+  }
+  localStorage.setItem('completed', JSON.stringify(state.completed));
+  renderSidebar();
+  updateProgress();
+  
+  // Re-render lesson header to update button state
+  if (window.location.hash === '#/lesson/' + slug) {
+    const lesson = LESSONS_DATA.find(l => l.slug === slug);
+    if(lesson) renderLesson(lesson);
+  }
+}
+
+function updateProgress() {
+  const total = LESSONS_DATA.length;
+  const done = state.completed.length;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  dom.progressText.innerText = `${done} / ${total} done`;
+  dom.sidebarPct.innerText = `${pct}%`;
+  dom.sidebarFill.style.width = `${pct}%`;
+}
+
+function updateSidebarActive(slug) {
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    if (el.dataset.slug === slug) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+}
+
+window.handleSearch = function(q) {
+  q = q.toLowerCase();
+  if (!q) {
+    dom.searchResults.classList.remove('visible');
+    return;
+  }
+  const results = LESSONS_DATA.filter(l => l.title.toLowerCase().includes(q) || (l.desc && l.desc.toLowerCase().includes(q)));
+  if (results.length > 0) {
+    dom.searchResults.innerHTML = results.slice(0, 10).map(l => `
+      <div class="search-result-item" onmousedown="window.location.hash='/lesson/${l.slug}'; document.getElementById('search-input').value=''; handleSearch('')">
+        <div class="search-result-title">${l.title}</div>
+        <div class="search-result-excerpt">${l.desc || ''}</div>
+      </div>
+    `).join('');
+    dom.searchResults.classList.add('visible');
+  } else {
+    dom.searchResults.innerHTML = `<div class="search-result-item"><div class="search-result-title" style="color: var(--text-muted)">No results found</div></div>`;
+    dom.searchResults.classList.add('visible');
+  }
+};
+
+window.closeSearch = function() {
+  dom.searchResults.classList.remove('visible');
+};
+
+document.addEventListener('DOMContentLoaded', init); 
+</script>
 </body>
 </html>
