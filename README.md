@@ -34,6 +34,8 @@ Many developers fall into the cycle of consuming tutorials without creating anyt
 
 This repository serves as both a learning resource and a record of that progress.
 
+------------------------------
+
 ## Tech Stack
 
 * React
