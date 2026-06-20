@@ -6,6 +6,8 @@ When I started learning React, I realized that watching tutorials alone wasn't e
 
 The goal isn't to create perfect projects. The goal is to improve consistently, understand how React works under the hood, and become a better developer through practice.
 
+------------------------------
+
 ## What This Project Covers
 
 Throughout this journey, I explore many of the core concepts that make React powerful, including:
