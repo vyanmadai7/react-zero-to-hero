@@ -52,6 +52,8 @@ This repository serves as both a learning resource and a record of that progress
 
 My focus is not on rushing through React but on building a strong foundation. By the end of this journey, I want to be comfortable creating complete frontend applications, understanding React deeply, and writing clean, maintainable code.
 
+------------------------------
+
 ## Live Demo
 
 https://vyanmadai7.github.io/react-zero-to-hero/
