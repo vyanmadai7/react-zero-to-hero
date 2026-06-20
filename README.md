@@ -24,6 +24,8 @@ Throughout this journey, I explore many of the core concepts that make React pow
 
 Each section focuses on learning by building rather than simply following theory.
 
+------------------------------
+
 ## Why I Built This
 
 Many developers fall into the cycle of consuming tutorials without creating anything on their own. I wanted a place where I could apply what I learn, track my progress, and gradually move from beginner-level concepts to real-world applications.
